@@ -21,7 +21,7 @@ module.exports = (app) => {
     new GoogleStrategy(
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        clientSecret: process.env.GOOGLE_CLIENT_SH,
         callbackURL: "http://localhost:7070/api/auth/google/callback",
         passReqToCallback: true, // <--- this enables access to `req`
         scope: ["profile"],
