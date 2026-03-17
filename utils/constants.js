@@ -6,7 +6,7 @@ const STATUS = {
 
 const USER_TYPE = {
   ADMIN: "ADMIN",
-  EMPLOYEE: "EMPLOYEE",
+  USER: "USER",
   OTHER: "OTHER",
 };
 

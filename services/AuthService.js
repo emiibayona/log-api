@@ -1,27 +1,43 @@
 const { withTryCatch } = require("../utils/tryCatch");
 const { WrapResults, ResultError } = require("./HandleResponse");
 
-const { User } = require("../config/database");
+const { User, Tenant,UserTenant, sequelize} = require("../config/database");
+const { USER_TYPE, STATUS } = require("../utils/constants");
+
 
 const service = {};
+let transaction = null;
 
 const parseUser = (info) => {
   const data = info?._json || info;
 
   return {
-    id: data.sub || data.id || data.user,
+    email: data.email,
     name: data.given_name,
     lastname: data.family_name,
     picture: data.picture,
     settings: data.settings || JSON.stringify({}),
+    tenant: info.tenant,
+    googleId: data.sub || data.id || data.user,
   };
 };
 
 service.get = withTryCatch(
-  async function (params) {
-    const id = params?.user || params?.id;
+  async function (params,fromProfile=false) {
+    const id = params?.googleId || params?.user || params?.id;
     const user = await User.findOne({
-      where: { id },
+      where: fromProfile ? {id} : { googleId:id },
+      // include: [{where:{slug:},association: 'UserTenants'}]
+      include: [{
+        model: Tenant,
+        where: { 
+            slug: params?.tenant, // Aquí aplicas el filtro del Tenant
+        },
+        required: true, // Esto convierte la consulta en un INNER JOIN
+        through: {
+            attributes: ['status', 'role'] // Agrega aquí el campo 'status'
+        },
+    }]
     });
 
     return WrapResults(user);
@@ -33,17 +49,24 @@ service.get = withTryCatch(
 
 service.create = withTryCatch(
   async function (data) {
-    const res = await User.create(parseUser(data));
+    const parsedUser = parseUser(data);
+    const user = await User.findOne({where:{googleId: parsedUser?.googleId}})
+    if(!user){
+      user = await User.create(parsedUser,{transaction});
+    }
+    const tenant = await Tenant.findOne({where:{slug:parsedUser.tenant}});
+    await user.addTenant(tenant, { through: { role: USER_TYPE.USER, status: STATUS.ACTIVE },transaction });
+
     return WrapResults(res);
   },
   {
-    error: "Error creating user",
+    errorPrexfix: "Error creating user",
   }
 );
 
 service.getOrCreate = withTryCatch(
-  async function (params) {
-    const user = await service.get(parseUser(params));
+  async function (params, fromProfile=false) {
+    const user = await service.get(fromProfile ? params : parseUser(params), fromProfile);
     if (user?.success && user?.value) {
       return WrapResults(user);
     } else {

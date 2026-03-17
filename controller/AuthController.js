@@ -11,18 +11,19 @@ controller.create = async (req, res) => {
 };
 
 controller.getUser = async (req, res) => {
-  return handleResponse(await service.get(req), res);
+  return handleResponse(await service.get(req.user, true), res);
 };
 
 controller.getUserOrCreate = async (req, res) => {
-  const body = Object.values(req.body)?.length
-    ? req.body
-    : req.session?.passport?.user;
-  const result = await service.getOrCreate(body || {});
-  if (res) {
-    return handleResponse(result, res);
-  } else {
-    return result.value;
+  try{
+    const result = await service.getOrCreate(req.user || req, req.fromProfile);
+    if (res) {
+      return handleResponse(result, res);
+    } else {
+      return result.value;
+    }
+   }catch(error){
+    res.status(500).json({error})
   }
 };
 

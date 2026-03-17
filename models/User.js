@@ -1,12 +1,16 @@
-const { STATUS, USER_TYPE } = require("../utils/constants");
-
 module.exports = (sequelize, DataTypes) => {
-  const User = sequelize.define("Users", {
+  return sequelize.define("User", {
     id: {
-      type: DataTypes.STRING,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      allowNull: false,
     },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    googleId: DataTypes.STRING,
     name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -23,19 +27,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    status: {
-      type: DataTypes.ENUM,
-      values: Object.values(STATUS),
-      allowNull: false,
-      defaultValue: "active",
-    },
-    type: {
-      type: DataTypes.ENUM,
-      values: Object.values(USER_TYPE),
-      allowNull: false,
-      defaultValue: USER_TYPE.OTHER,
-    },
+    
+  
   });
-
-  return User;
 };

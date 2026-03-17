@@ -1,0 +1,31 @@
+const express = require("express");
+const router = express.Router();
+
+const authRoutes = require("./auth");
+// const collectionRoutes = require("./CollectionRoutes");
+// const userRoutes = require("./UserRoutes");
+// const syncRoutes = require("./SyncRoutes");
+// const infoRoutes = require("./InfoRoutes");
+// const productsRoutes = require("./ProductsRoutes");
+// const orderRoutes = require("./OrdersRoutes");
+// const cacheRoutes = require("./CacheRoutes");
+// const filesRoutes = require("./FilesRouter");
+
+// TODO:
+// Agregar middleware para manejar las llamadas de admin o usuario comun.
+
+router.use("/auth", authRoutes);
+// router.use("/collections", collectionRoutes);
+// router.use("/users", userRoutes);
+// router.use("/sync", syncRoutes);
+// router.use("/info", infoRoutes);
+// router.use("/products", productsRoutes);
+// router.use("/orders", orderRoutes);
+// router.use("/cache", cacheRoutes);
+// router.use("/files", filesRoutes);
+
+router.get("/", (req, res) => {
+  res.status(200).json({ test: "Tested" });
+});
+
+module.exports = router;
