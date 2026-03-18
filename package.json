@@ -7,6 +7,7 @@
     "start": "node index.js",
     "start:dev": "nodemon index.js",
     "watch": "node --inspect --watch index.js",
+    "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
