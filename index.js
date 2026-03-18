@@ -33,7 +33,7 @@ if (process.env.NODE_ENV !== "production") {
   );
   // });
 } else {
-  const { sequelize } = require("./database");
+  const { sequelize } = require("./config/database");
 }
 
 module.exports = app;
