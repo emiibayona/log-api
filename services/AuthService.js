@@ -40,6 +40,7 @@ service.get = withTryCatch(
     }]
     });
 
+    user.Tenant = user.Tenants.map(x=> ({baseUrl: x.baseUrl, slug: x.slug, name:x.name, rol: x.UserTenant.role, status:x.UserTenant.status}))
     return WrapResults(user);
   },
   {
