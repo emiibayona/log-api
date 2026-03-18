@@ -12,7 +12,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:8089/api/auth/callback",
+      callbackURL: "https://log-api-one.vercel.app/api/auth/callback",
       passReqToCallback: true,
     },
     async (req, accessToken, refreshToken, profile, done) => {
@@ -20,7 +20,7 @@ passport.use(
         const state = JSON.parse(Buffer.from(req.query.state, "base64").toString())
         // Pasamos el profile al controlador para buscar o crear
         // Es mejor pasar directamente el profile que mutar el req.body
-        const user = await controller.getUserOrCreate({...profile, tenant: state?.tenant});
+        const user = await controller.getUserOrCreate({ ...profile, tenant: state?.tenant });
         return done(null, user?.value || user);
       } catch (error) {
         return done(error, null);
@@ -43,7 +43,7 @@ function verifyToken(req, res, next) {
   jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
     if (err) return res.status(403).json({ message: "Invalid token" });
     req.user = decoded;
-    req.fromProfile =true;
+    req.fromProfile = true;
     next();
   });
 }
@@ -51,8 +51,8 @@ function verifyToken(req, res, next) {
 // --- RUTAS ---
 router.get("/google", (req, res, next) => {
   const origin = req.query.origin || process.env.ORIGIN_DEFAULT_URL;
-  const tenant = req.query.tenant || process.env.DEFAULT_TENANT ;
-  
+  const tenant = req.query.tenant || process.env.DEFAULT_TENANT;
+
   // Lo enviamos a Google codificado en Base64 dentro de 'state'
   const state = Buffer.from(JSON.stringify({ origin, tenant })).toString("base64");
 
@@ -69,9 +69,9 @@ router.get(
   passport.authenticate("google", { session: false }), // session false porque usaremos JWT
   (req, res) => {
     try {
-      const state = req.query.state 
+      const state = req.query.state
         ? JSON.parse(Buffer.from(req.query.state, "base64").toString())
-        : { origin: process.env.ORIGIN_DEFAULT_URL, tenant:process.env.DEFAULT_TENANT  };
+        : { origin: process.env.ORIGIN_DEFAULT_URL, tenant: process.env.DEFAULT_TENANT };
 
       const token = jwt.sign(
         { id: req.user.id, email: req.user.email, tenant: state.tenant },
