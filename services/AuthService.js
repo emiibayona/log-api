@@ -1,7 +1,7 @@
 const { withTryCatch } = require("../utils/tryCatch");
 const { WrapResults, ResultError } = require("./HandleResponse");
 
-const { User, Tenant,UserTenant, sequelize} = require("../config/database");
+const { User, Tenant, UserTenant, sequelize } = require("../config/database");
 const { USER_TYPE, STATUS } = require("../utils/constants");
 
 
@@ -23,24 +23,29 @@ const parseUser = (info) => {
 };
 
 service.get = withTryCatch(
-  async function (params,fromProfile=false) {
+  async function (params, fromProfile = false) {
     const id = params?.googleId || params?.user || params?.id;
     const user = await User.findOne({
-      where: fromProfile ? {id} : { googleId:id },
+      where: fromProfile ? { id } : { googleId: id },
       // include: [{where:{slug:},association: 'UserTenants'}]
       include: [{
         model: Tenant,
-        where: { 
-            slug: params?.tenant, // Aquí aplicas el filtro del Tenant
+        where: {
+          slug: params?.tenant, // Aquí aplicas el filtro del Tenant
         },
         required: true, // Esto convierte la consulta en un INNER JOIN
         through: {
-            attributes: ['status', 'role'] // Agrega aquí el campo 'status'
+          attributes: ['status', 'role'] // Agrega aquí el campo 'status'
         },
-    }]
+      }]
     });
 
-    user.Tenant = user.Tenants.map(x=> ({baseUrl: x.baseUrl, slug: x.slug, name:x.name, rol: x.UserTenant.role, status:x.UserTenant.status}))
+    user.Tenant = user.Tenants.map(x => ({
+      baseUrl: x.baseUrl, slug: x.slug,
+      name: x.name,
+      rol: x.UserTenant.role,
+      status: x.UserTenant.status
+    }))
     return WrapResults(user);
   },
   {
@@ -51,12 +56,15 @@ service.get = withTryCatch(
 service.create = withTryCatch(
   async function (data) {
     const parsedUser = parseUser(data);
-    const user = await User.findOne({where:{googleId: parsedUser?.googleId}})
-    if(!user){
-      user = await User.create(parsedUser,{transaction});
+    const user = await User.findOne({ where: { googleId: parsedUser?.googleId } })
+    if (!user) {
+      user = await User.create(parsedUser, { transaction });
     }
-    const tenant = await Tenant.findOne({where:{slug:parsedUser.tenant}});
-    await user.addTenant(tenant, { through: { role: USER_TYPE.USER, status: STATUS.ACTIVE },transaction });
+    const tenant = await Tenant.findOne({ where: { slug: parsedUser.tenant } });
+    await user.addTenant(tenant, {
+      through:
+        { role: USER_TYPE.USER, status: STATUS.ACTIVE }, transaction
+    });
 
     return WrapResults(res);
   },
@@ -66,7 +74,7 @@ service.create = withTryCatch(
 );
 
 service.getOrCreate = withTryCatch(
-  async function (params, fromProfile=false) {
+  async function (params, fromProfile = false) {
     const user = await service.get(fromProfile ? params : parseUser(params), fromProfile);
     if (user?.success && user?.value) {
       return WrapResults(user);
