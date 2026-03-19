@@ -52,9 +52,10 @@ function verifyToken(req, res, next) {
 router.get("/google", (req, res, next) => {
   const origin = req.query.origin || process.env.ORIGIN_DEFAULT_URL;
   const tenant = req.query.tenant || process.env.DEFAULT_TENANT;
+  const redirect = req.query.redirect || process.env.ORIGIN_DEFAULT_URL;
 
   // Lo enviamos a Google codificado en Base64 dentro de 'state'
-  const state = Buffer.from(JSON.stringify({ origin, tenant })).toString("base64");
+  const state = Buffer.from(JSON.stringify({ origin, tenant, redirect })).toString("base64");
 
   passport.authenticate("google", {
     scope: ["profile", "email"],
@@ -79,7 +80,7 @@ router.get(
         { expiresIn: '24h' }
       );
 
-      res.redirect(`${state.origin}/auth/success?token=${token}`);
+      res.redirect(`${state.origin}/auth/success?token=${token}&redirect=${state.redirect}`);
     } catch (error) {
       res.redirect(`${state.origin}/info?error=auth_failed`);
     }
