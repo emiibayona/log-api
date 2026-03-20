@@ -16,6 +16,7 @@
   "type": "commonjs",
   "dependencies": {
     "@vercel/blob": "^2.3.0",
+    "bcrypt": "^6.0.0",
     "body-parser": "^1.20.2",
     "connect-sqlite3": "^0.9.15",
     "cors": "^2.8.5",

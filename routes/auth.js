@@ -64,6 +64,12 @@ router.get("/google", (req, res, next) => {
   })(req, res, next);
 });
 
+
+router.post('/register', controller.createNotGoogle);
+
+router.post('/login', controller.login);
+
+
 // 2. Callback de Google
 router.get(
   "/callback",

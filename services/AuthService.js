@@ -1,9 +1,10 @@
 const { withTryCatch } = require("../utils/tryCatch");
-const { WrapResults, ResultError } = require("./HandleResponse");
+const { WrapResults, ResultError, handleResponse } = require("./HandleResponse");
 
 const { User, Tenant, UserTenant, sequelize } = require("../config/database");
 const { USER_TYPE, STATUS } = require("../utils/constants");
-
+const jwt = require("jsonwebtoken"); // Asegúrate de tenerlo instalado
+const bcrypt = require('bcrypt');
 
 const service = {};
 let transaction = null;
@@ -53,20 +54,67 @@ service.get = withTryCatch(
   }
 );
 
+async function addTenantToUser(user, tenant, role = USER_TYPE.USER) {
+  const tt = await Tenant.findOne({ where: { slug: tenant } });
+  await user.addTenant(tt, {
+    through:
+      { role: USER_TYPE.USER, status: STATUS.ACTIVE }
+  });
+}
+
 service.create = withTryCatch(
   async function (data) {
     const parsedUser = parseUser(data);
     const user = await User.findOne({ where: { googleId: parsedUser?.googleId } })
     if (!user) {
-      user = await User.create(parsedUser, { transaction });
+      user = await User.create(parsedUser);
     }
-    const tenant = await Tenant.findOne({ where: { slug: parsedUser.tenant } });
-    await user.addTenant(tenant, {
-      through:
-        { role: USER_TYPE.USER, status: STATUS.ACTIVE }, transaction
-    });
+    await addTenantToUser(user, parsedUser.tenant);
 
     return WrapResults(res);
+  },
+  {
+    errorPrexfix: "Error creating user",
+  }
+);
+
+service.createNotGoogle = withTryCatch(
+  async function (data) {
+    const { email, password, tenant, userInfo, role } = data;
+
+    // 1. Verificar si el usuario ya existe
+    const existingUser = await User.findOne({
+      where: { email },
+      // include: [{where:{slug:},association: 'UserTenants'}]
+      include: [{
+        model: Tenant,
+        where: {
+          slug: tenant, // Aquí aplicas el filtro del Tenant
+        },
+        required: true, // Esto convierte la consulta en un INNER JOIN
+        through: {
+          attributes: ['status', 'role'] // Agrega aquí el campo 'status'
+        },
+      }]
+    });
+
+    if (existingUser) {
+      throw 'El email ya está registrado para este sitio.';
+    }
+
+    // 2. Cifrar contraseña (Salt rounds = 10 es lo ideal por balance seguridad/velocidad)
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 3. Crear usuario
+    const newUser = await User.create({
+      ...userInfo,
+      email,
+      password: hashedPassword,
+    });
+    if (newUser)
+      await addTenantToUser(newUser, tenant || 'geartown', role);
+
+    return WrapResults(newUser);
   },
   {
     errorPrexfix: "Error creating user",
@@ -97,6 +145,55 @@ service.update = withTryCatch(
     return WrapResults(
       await User.update(parseUser(params), { where: { id: user.id } })
     );
+  },
+  {
+    error: "Error updating the user",
+  }
+);
+
+service.login = withTryCatch(
+  async function (body) {
+    const { email, password, tenant } = body;
+
+    // 1. Buscar usuario
+    const user = await User.findOne({
+      where: { email },
+      // include: [{where:{slug:},association: 'UserTenants'}]
+      include: [{
+        model: Tenant,
+        where: {
+          slug: tenant, // Aquí aplicas el filtro del Tenant
+        },
+        required: true, // Esto convierte la consulta en un INNER JOIN
+        through: {
+          attributes: ['status', 'role'] // Agrega aquí el campo 'status'
+        },
+      }]
+    });
+
+    if (!user) {
+      throw 'Cuenta no existente'
+    }
+
+    // 2. Comparar contraseñas
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw 'Credenciales inválidas.';
+    }
+
+    // 3. Generar JWT (Usando tu JWT_SECRET de las variables de entorno)
+    const token = jwt.sign(
+      { id: user.id, email: user.email, tenant: tenant },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return WrapResults({
+      message: 'Login exitoso',
+      token,
+      user: { id: user.id, email: user.email }
+    });
+
   },
   {
     error: "Error updating the user",
