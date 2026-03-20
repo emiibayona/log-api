@@ -153,7 +153,7 @@ service.update = withTryCatch(
 
 service.login = withTryCatch(
   async function (body) {
-    const { email, password, tenant } = body;
+    const { email, password, tenant, redirect } = body;
 
     // 1. Buscar usuario
     const user = await User.findOne({
@@ -191,7 +191,8 @@ service.login = withTryCatch(
     return WrapResults({
       message: 'Login exitoso',
       token,
-      user: { id: user.id, email: user.email }
+      user: { id: user.id, email: user.email },
+      redirect
     });
 
   },
