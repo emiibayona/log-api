@@ -195,9 +195,6 @@ service.login = withTryCatch(
       redirect
     });
 
-  },
-  {
-    error: "Error updating the user",
   }
 );
 module.exports = service;
