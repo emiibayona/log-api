@@ -28,7 +28,12 @@ controller.getUserOrCreate = async (req, res) => {
 };
 
 controller.update = async (req, res) => {
-  return handleResponse(await service.update(req.body), res);
+  try {
+    const result = await service.update(req.body);
+    return handleResponse(result, res);
+  } catch (error) {
+    res.status(500).json({ error })
+  }
 };
 
 controller.createNotGoogle = async (req, res) => {

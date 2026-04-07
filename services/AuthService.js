@@ -14,12 +14,13 @@ const parseUser = (info) => {
 
   return {
     email: data.email,
-    name: data.given_name,
-    lastname: data.family_name,
+    name: data.given_name || data.name,
+    lastname: data.family_name || data.lastname,
     picture: data.picture,
     settings: data.settings || JSON.stringify({}),
     tenant: info.tenant,
     googleId: data.sub || data.id || data.user,
+    id: data.id,
   };
 };
 
@@ -70,7 +71,7 @@ service.create = withTryCatch(
       user = await User.create(parsedUser);
     }
     await addTenantToUser(user, parsedUser.tenant);
-
+    delete user.password;
     return WrapResults(res);
   },
   {
@@ -125,6 +126,7 @@ service.getOrCreate = withTryCatch(
   async function (params, fromProfile = false) {
     const user = await service.get(fromProfile ? params : parseUser(params), fromProfile);
     if (user?.success && user?.value) {
+      delete user?.value?.password;
       return WrapResults(user);
     } else {
       return service.create(params);
@@ -137,13 +139,15 @@ service.getOrCreate = withTryCatch(
 
 service.update = withTryCatch(
   async function (params) {
-    const user = await service.get(params);
-    if (user?.success && !user?.value) {
+    const user = await service.get(params, true);
+    if (user?.success && !user?.value || user?.error) {
       throw user;
     }
 
+    await User.update(parseUser(params), { where: { id: user.value.id } })
+
     return WrapResults(
-      await User.update(parseUser(params), { where: { id: user.id } })
+      parseUser(params)
     );
   },
   {
