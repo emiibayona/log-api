@@ -196,6 +196,7 @@ service.login = withTryCatch(
       message: 'Login exitoso',
       token,
       user: { id: user.id, email: user.email },
+      timestamp: Date.now(),
       redirect
     });
 
